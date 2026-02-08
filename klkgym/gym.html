@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StrongLog • Tu Progreso</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; }
+    .tail-container { max-width: 448px; margin: 0 auto; }
+  </style>
+</head>
+<body class="bg-zinc-950 text-zinc-100 min-h-screen pb-20">
+  <div class="tail-container min-h-screen flex flex-col">
+    <!-- Header -->
+    <header class="bg-zinc-900 border-b border-zinc-800 px-6 py-5">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-emerald-600 rounded-2xl flex items-center justify-center text-3xl shadow-lg">🏋️</div>
+          <div>
+            <h1 class="text-3xl font-bold tracking-tighter">StrongLog</h1>
+            <p class="text-xs text-emerald-400 -mt-1">Tu gimnasio personal</p>
+          </div>
+        </div>
+        <button onclick="clearAllData()" class="text-red-400 hover:text-red-500 text-sm flex items-center gap-1">
+          <i class="fas fa-trash"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Contenido principal -->
+    <main class="flex-1 p-6 overflow-y-auto" id="main-content">
+      <!-- === ENTRENAMIENTO ACTUAL === -->
+      <div id="current-screen">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-2xl font-semibold">Entrenamiento de hoy</h2>
+          <span id="today-date" class="text-zinc-400 text-sm"></span>
+        </div>
+
+        <!-- Formulario -->
+        <div class="bg-zinc-900 rounded-3xl p-6 mb-8">
+          <div class="grid grid-cols-2 gap-4">
+            <div class="col-span-2">
+              <label class="block text-sm text-zinc-400 mb-1">Nombre del ejercicio</label>
+              <input list="exercise-list" id="name" type="text" 
+                     class="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-4 py-3 focus:outline-none focus:border-emerald-500"
+                     placeholder="Press de banca">
+            </div>
+            <div>
+              <label class="block text-sm text-zinc-400 mb-1">Series</label>
+              <input id="sets" type="number" min="1" value="4"
+                     class="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-4 py-3 focus:outline-none focus:border-emerald-500">
+            </div>
+            <div>
+              <label class="block text-sm text-zinc-400 mb-1">Repeticiones</label>
+              <input id="reps" type="number" min="1" value="10"
+                     class="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-4 py-3 focus:outline-none focus:border-emerald-500">
+            </div>
+            <div class="col-span-2">
+              <label class="block text-sm text-zinc-400 mb-1">Peso (kg)</label>
+              <input id="weight" type="number" min="0" step="0.5" value="80"
+                     class="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-4 py-3 focus:outline-none focus:border-emerald-500">
+            </div>
+          </div>
+          <button onclick="addExercise()" 
+                  class="mt-6 w-full bg-emerald-600 hover:bg-emerald-700 transition py-4 rounded-2xl font-semibold text-lg flex items-center justify-center gap-2">
+            <i class="fas fa-plus"></i> Añadir ejercicio
+          </button>
+        </div>
+
+        <!-- Lista actual -->
+        <h3 class="font-medium mb-3 flex items-center gap-2">
+          <span>Ejercicios en esta sesión</span>
+          <span id="current-count" class="bg-zinc-800 text-xs px-3 py-1 rounded-full"></span>
+        </h3>
+        <div id="current-list" class="space-y-4 mb-8"></div>
+
+        <!-- Volumen actual -->
+        <div class="bg-zinc-900 rounded-3xl p-6 mb-8 text-center">
+          <p class="text-zinc-400 text-sm">Volumen total estimado</p>
+          <p id="current-volume" class="text-4xl font-bold text-emerald-400">0 kg</p>
+        </div>
+
+        <!-- Botón finalizar -->
+        <button onclick="finishWorkout()" 
+                class="w-full bg-emerald-600 hover:bg-emerald-700 transition py-5 rounded-3xl font-bold text-xl shadow-xl shadow-emerald-900/50">
+          Finalizar Entrenamiento 💪
+        </button>
+      </div>
+
+      <!-- === HISTORIAL === -->
+      <div id="history-screen" class="hidden">
+        <h2 class="text-2xl font-semibold mb-6">Historial de entrenamientos</h2>
+        <div id="history-list" class="space-y-4"></div>
+      </div>
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-zinc-900 border-t border-zinc-800">
+      <div class="flex text-sm">
+        <button onclick="switchTab(0)" id="nav-today"
+                class="flex-1 py-4 flex flex-col items-center text-emerald-400">
+          <i class="fas fa-dumbbell text-2xl"></i>
+          <span class="mt-1 text-xs">Hoy</span>
+        </button>
+        <button onclick="switchTab(1)" id="nav-history"
+                class="flex-1 py-4 flex flex-col items-center text-zinc-400">
+          <i class="fas fa-history text-2xl"></i>
+          <span class="mt-1 text-xs">Historial</span>
+        </button>
+      </div>
+    </nav>
+  </div>
+
+  <!-- Modal detalle sesión -->
+  <div id="modal" class="hidden fixed inset-0 bg-black/80 flex items-end z-50">
+    <div class="bg-zinc-900 w-full max-w-md rounded-t-3xl overflow-hidden">
+      <div class="p-6 border-b border-zinc-800 flex justify-between items-center">
+        <div>
+          <h3 id="modal-date" class="font-semibold"></h3>
+          <p id="modal-volume-text" class="text-emerald-400 text-sm"></p>
+        </div>
+        <button onclick="closeModal()" class="text-3xl leading-none">×</button>
+      </div>
+      
+      <div id="modal-exercises" class="p-6 space-y-4 max-h-96 overflow-y-auto"></div>
+      
+      <div class="p-6 border-t border-zinc-800">
+        <button onclick="deleteCurrentSession()" 
+                class="w-full bg-red-600 hover:bg-red-700 py-4 rounded-2xl font-semibold">
+          Eliminar este entrenamiento
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <datalist id="exercise-list">
+    <option value="Press de Banca">
+    <option value="Sentadillas">
+    <option value="Peso Muerto">
+    <option value="Dominadas">
+    <option value="Flexiones">
+    <option value="Press Militar">
+    <option value="Remo con Barra">
+    <option value="Curl de Bíceps">
+    <option value="Tríceps en Polea">
+    <option value="Zancadas">
+    <option value="Elevaciones Laterales">
+    <option value="Plancha">
+    <option value="Hip Thrust">
+  </datalist>
+
+  <script>
+    let currentExercises = [];
+    let historySessions = [];
+    let currentModalSessionId = null;
+
+    function loadData() {
+      currentExercises = JSON.parse(localStorage.getItem('currentExercises')) || [];
+      historySessions = JSON.parse(localStorage.getItem('historySessions')) || [];
+    }
+
+    function saveData() {
+      localStorage.setItem('currentExercises', JSON.stringify(currentExercises));
+      localStorage.setItem('historySessions', JSON.stringify(historySessions));
+    }
+
+    function calculateVolume(exercises) {
+      return exercises.reduce((total, ex) => total + (ex.sets * ex.reps * ex.weight), 0);
+    }
+
+    function formatDate(dateStr) {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    }
+
+    function renderCurrent() {
+      const listEl = document.getElementById('current-list');
+      listEl.innerHTML = '';
+
+      if (currentExercises.length === 0) {
+        listEl.innerHTML = `<p class="text-center py-12 text-zinc-500">No hay ejercicios aún.<br>¡Agrega el primero arriba!</p>`;
+      } else {
+        currentExercises.forEach((ex, index) => {
+          const div = document.createElement('div');
+          div.className = 'bg-zinc-900 rounded-3xl p-5 flex justify-between items-center';
+          div.innerHTML = `
+            <div>
+              <div class="font-semibold">${ex.name}</div>
+              <div class="text-emerald-400 text-sm">${ex.sets} series × ${ex.reps} reps @ ${ex.weight} kg</div>
+            </div>
+            <button onclick="removeExercise(${index})" class="text-red-400 hover:text-red-500 p-2 text-xl">🗑</button>
+          `;
+          listEl.appendChild(div);
+        });
+      }
+
+      document.getElementById('current-count').textContent = `${currentExercises.length} ejercicios`;
+      document.getElementById('current-volume').textContent = `${calculateVolume(currentExercises)} kg`;
+    }
+
+    function renderHistory() {
+      const container = document.getElementById('history-list');
+      container.innerHTML = '';
+
+      if (historySessions.length === 0) {
+        container.innerHTML = `<p class="text-center py-12 text-zinc-500">Todavía no tienes entrenamientos guardados.<br>¡Completa tu primer sesión!</p>`;
+        return;
+      }
+
+      historySessions.forEach(session => {
+        const volume = calculateVolume(session.exercises);
+        const card = document.createElement('div');
+        card.className = 'bg-zinc-900 rounded-3xl p-6 cursor-pointer hover:ring-2 hover:ring-emerald-500/30 transition';
+        card.onclick = () => showSessionDetail(session.id);
+        card.innerHTML = `
+          <div class="flex justify-between items-start">
+            <div>
+              <div class="font-medium">${formatDate(session.date)}</div>
+              <div class="text-sm text-zinc-400">${session.exercises.length} ejercicios</div>
+            </div>
+            <div class="text-right">
+              <div class="text-emerald-400 font-bold">${volume} kg</div>
+              <div class="text-xs text-zinc-500">volumen</div>
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function addExercise() {
+      const name = document.getElementById('name').value.trim();
+      const sets = parseInt(document.getElementById('sets').value);
+      const reps = parseInt(document.getElementById('reps').value);
+      const weight = parseFloat(document.getElementById('weight').value);
+
+      if (!name || !sets || !reps || !weight) {
+        alert("Por favor completa todos los campos");
+        return;
+      }
+
+      currentExercises.push({ id: Date.now(), name, sets, reps, weight });
+      saveData();
+      renderCurrent();
+
+      // Limpiar formulario (mantener valores típicos)
+      document.getElementById('name').value = '';
+    }
+
+    function removeExercise(index) {
+      if (confirm("¿Eliminar este ejercicio de la sesión actual?")) {
+        currentExercises.splice(index, 1);
+        saveData();
+        renderCurrent();
+      }
+    }
+
+    function finishWorkout() {
+      if (currentExercises.length === 0) {
+        alert("Agrega al menos un ejercicio antes de finalizar");
+        return;
+      }
+
+      const session = {
+        id: Date.now(),
+        date: new Date().toISOString(),
+        exercises: [...currentExercises]
+      };
+
+      historySessions.unshift(session);
+      currentExercises = [];
+
+      saveData();
+      renderCurrent();
+      renderHistory();
+      switchTab(1);
+
+      alert("¡Entrenamiento guardado correctamente! 💪");
+    }
+
+    function showSessionDetail(id) {
+      currentModalSessionId = id;
+      const session = historySessions.find(s => s.id === id);
+      if (!session) return;
+
+      document.getElementById('modal-date').textContent = formatDate(session.date);
+      document.getElementById('modal-volume-text').textContent = `${calculateVolume(session.exercises)} kg de volumen`;
+
+      const container = document.getElementById('modal-exercises');
+      container.innerHTML = '';
+
+      session.exercises.forEach(ex => {
+        const div = document.createElement('div');
+        div.className = 'flex justify-between items-center py-4 border-b border-zinc-800 last:border-0';
+        div.innerHTML = `
+          <div class="font-medium">${ex.name}</div>
+          <div class="text-right text-emerald-400">
+            ${ex.sets}×${ex.reps} @ ${ex.weight} kg
+          </div>
+        `;
+        container.appendChild(div);
+      });
+
+      document.getElementById('modal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('modal').classList.add('hidden');
+    }
+
+    function deleteCurrentSession() {
+      if (confirm("¿Estás seguro de eliminar este entrenamiento? Esta acción no se puede deshacer.")) {
+        historySessions = historySessions.filter(s => s.id !== currentModalSessionId);
+        saveData();
+        renderHistory();
+        closeModal();
+      }
+    }
+
+    function switchTab(tab) {
+      document.getElementById('current-screen').classList.toggle('hidden', tab !== 0);
+      document.getElementById('history-screen').classList.toggle('hidden', tab !== 1);
+
+      document.getElementById('nav-today').classList.toggle('text-emerald-400', tab === 0);
+      document.getElementById('nav-today').classList.toggle('text-zinc-400', tab !== 0);
+      document.getElementById('nav-history').classList.toggle('text-emerald-400', tab === 1);
+      document.getElementById('nav-history').classList.toggle('text-zinc-400', tab !== 1);
+    }
+
+    function clearAllData() {
+      if (confirm("¿Borrar TODOS los datos (entrenamientos actuales e historial)?")) {
+        localStorage.removeItem('currentExercises');
+        localStorage.removeItem('historySessions');
+        location.reload();
+      }
+    }
+
+    // Inicialización
+    window.onload = function() {
+      loadData();
+      
+      // Fecha de hoy
+      const todayEl = document.getElementById('today-date');
+      todayEl.textContent = new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+
+      renderCurrent();
+      renderHistory();
+      switchTab(0);
+    };
+  </script>
+</body>
+</html>
